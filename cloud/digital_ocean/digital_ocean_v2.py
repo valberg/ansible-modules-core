@@ -57,9 +57,9 @@ options:
   region_slug:
     description:
      - This is the slug of the region you would like your server to be created in."
-  ssh_key_ids:
+  ssh_keys:
     description:
-     - Optional, comma separated list of ssh_key_ids that you would like to be added to the server.
+     - Optional, comma separated list of ids of ssh_keys that you would like to be added to the server.
   virtio:
     description:
      - "Bool, turn on virtio driver in droplet for improved network and storage I/O."
@@ -141,13 +141,13 @@ EXAMPLES = '''
       wait_timeout=500
 
 # Create a droplet with ssh key
-# The ssh key id can be passed as argument at the creation of a droplet (see ssh_key_ids).
-# Several keys can be added to ssh_key_ids as id1,id2,id3
+# The ssh key id can be passed as argument at the creation of a droplet (see ssh_keys).
+# Several keys can be added to ssh_keys as id1,id2,id3
 # The keys are used to connect as root to the droplet.
 
 - digital_ocean_v2: >
       state=present
-      ssh_key_ids=id1,id2
+      ssh_keys=id1,id2
       name=mydroplet
       api_token=XXX
       size_slug=512mb
@@ -156,6 +156,8 @@ EXAMPLES = '''
 '''
 
 import sys
+import os
+import time
 
 try:
     import dopy
@@ -168,14 +170,17 @@ if dopy.__version__ < '0.3.0':
     print "failed=True msg='dopy >= 0.3.0 required for this module'"
     sys.exit(1)
 
+
 class TimeoutError(DoError):
     def __init__(self, msg, id):
         super(TimeoutError, self).__init__(msg)
         self.id = id
 
+
 class JsonfyMixIn(object):
     def to_json(self):
         return self.__dict__
+
 
 class Droplet(JsonfyMixIn):
     manager = None
@@ -193,7 +198,7 @@ class Droplet(JsonfyMixIn):
                 setattr(self, k, v)
         else:
             json = self.manager.show_droplet(self.id)
-            if json['ip_address']:
+            if json['networks']['v4'][0]['ip_address']:
                 self.update_attr(json)
 
     def power_on(self):
@@ -213,7 +218,7 @@ class Droplet(JsonfyMixIn):
                 time.sleep(min(20, end_time - time.time()))
                 self.update_attr()
                 if self.is_powered_on():
-                    if not self.ip_address:
+                    if not self.networks['v4'][0]['ip_address']:
                         raise TimeoutError('No ip is found.', self.id)
                     return
             raise TimeoutError('Wait for droplet running timeout', self.id)
@@ -226,8 +231,18 @@ class Droplet(JsonfyMixIn):
         cls.manager = DoManager(None, api_token, api_version=2)
 
     @classmethod
-    def add(cls, name, size_slug, image_slug, region_slug, ssh_key_ids=None, virtio=True, private_networking=False, backups_enabled=False):
-        json = cls.manager.new_droplet(name, size_slug, image_slug, region_slug, ssh_key_ids, virtio, private_networking, backups_enabled)
+    def add(cls, name, size_slug, image_slug, region_slug, ssh_keys=None,
+            virtio=True, private_networking=False, backups_enabled=False):
+        json = cls.manager.new_droplet(
+            name,
+            size_slug,
+            image_slug,
+            region_slug,
+            ssh_key_ids=ssh_keys,
+            virtio=virtio,
+            private_networking=private_networking,
+            backups_enabled=backups_enabled
+        )
         droplet = cls(json)
         return droplet
 
@@ -254,6 +269,7 @@ class Droplet(JsonfyMixIn):
     def list_all(cls):
         json = cls.manager.all_active_droplets()
         return map(cls, json)
+
 
 class SSH(JsonfyMixIn):
     manager = None
@@ -289,6 +305,7 @@ class SSH(JsonfyMixIn):
     def add(cls, name, key_pub):
         json = cls.manager.new_ssh_key(name, key_pub)
         return cls(json)
+
 
 def core(module):
     def getkeyordie(k):
@@ -326,7 +343,7 @@ def core(module):
                     size_slug=getkeyordie('size_slug'),
                     image_slug=getkeyordie('image_slug'),
                     region_slug=getkeyordie('region_slug'),
-                    ssh_key_ids=module.params['ssh_key_ids'],
+                    ssh_keys=module.params['ssh_keys'],
                     virtio=module.params['virtio'],
                     private_networking=module.params['private_networking'],
                     backups_enabled=module.params['backups_enabled'],
@@ -371,7 +388,10 @@ def core(module):
         elif state in ('absent', 'deleted'):
             key = SSH.find(name)
             if not key:
-                module.exit_json(changed=False, msg='SSH key with the name of %s is not found.' % name)
+                module.exit_json(
+                    changed=False,
+                    msg='SSH key with the name of %s is not found.' % name
+                )
             key.destroy()
             module.exit_json(changed=True)
 
@@ -380,13 +400,14 @@ def main():
     module = AnsibleModule(
         argument_spec = dict(
             command = dict(choices=['droplet', 'ssh'], default='droplet'),
-            state = dict(choices=['active', 'present', 'absent', 'deleted'], default='present'),
+            state = dict(choices=['active', 'present', 'absent', 'deleted'],
+                         default='present'),
             api_token = dict(aliases=['API_TOKEN'], no_log=True),
             name = dict(type='str'),
             size_slug = dict(type='str'),
             image_slug = dict(type='str'),
             region_slug = dict(type='str'),
-            ssh_key_ids = dict(default=''),
+            ssh_keys = dict(default=''),
             virtio = dict(type='bool', default='yes'),
             private_networking = dict(type='bool', default='no'),
             backups_enabled = dict(type='bool', default='no'),
