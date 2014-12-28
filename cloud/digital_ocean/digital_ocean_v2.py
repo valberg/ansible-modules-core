@@ -48,15 +48,15 @@ options:
     version_added: "1.4"
     default: "no"
     choices: [ "yes", "no" ]
-  size_id:
+  size_slug:
     description:
-     - Numeric, this is the id of the size you would like the droplet created with.
-  image_id:
+     - This is the slug of the size you would like the droplet created with.
+  image_slug:
     description:
-     - Numeric, this is the id of the image you would like the droplet created with.
-  region_id:
+     - This is the slug of the image you would like the droplet created with.
+  region_slug:
     description:
-     - "Numeric, this is the id of the region you would like your server to be created in."
+     - This is the slug of the region you would like your server to be created in."
   ssh_key_ids:
     description:
      - Optional, comma separated list of ssh_key_ids that you would like to be added to the server.
@@ -117,9 +117,9 @@ EXAMPLES = '''
       command=droplet
       name=mydroplet
       api_token=XXX
-      size_id=1
-      region_id=2
-      image_id=3
+      size_slug=512mb
+      region_slug=ams3
+      image_slug=fedora-20-x64
       wait_timeout=500
   register: my_droplet
 - debug: msg="ID is {{ my_droplet.droplet.id }}"
@@ -135,9 +135,9 @@ EXAMPLES = '''
       id=123
       name=mydroplet
       api_token=XXX
-      size_id=1
-      region_id=2
-      image_id=3
+      size_slug=512mb
+      region_slug=ams3
+      image_slug=fedora-20-x64
       wait_timeout=500
 
 # Create a droplet with ssh key
@@ -150,9 +150,9 @@ EXAMPLES = '''
       ssh_key_ids=id1,id2
       name=mydroplet
       api_token=XXX
-      size_id=1
-      region_id=2
-      image_id=3
+      size_slug=512mb
+      region_slug=ams3
+      image_slug=fedora-20-x64
 '''
 
 import sys
@@ -226,8 +226,8 @@ class Droplet(JsonfyMixIn):
         cls.manager = DoManager(None, api_token, api_version=2)
 
     @classmethod
-    def add(cls, name, size_id, image_id, region_id, ssh_key_ids=None, virtio=True, private_networking=False, backups_enabled=False):
-        json = cls.manager.new_droplet(name, size_id, image_id, region_id, ssh_key_ids, virtio, private_networking, backups_enabled)
+    def add(cls, name, size_slug, image_slug, region_slug, ssh_key_ids=None, virtio=True, private_networking=False, backups_enabled=False):
+        json = cls.manager.new_droplet(name, size_slug, image_slug, region_slug, ssh_key_ids, virtio, private_networking, backups_enabled)
         droplet = cls(json)
         return droplet
 
@@ -323,9 +323,9 @@ def core(module):
             if not droplet:
                 droplet = Droplet.add(
                     name=getkeyordie('name'),
-                    size_id=getkeyordie('size_id'),
-                    image_id=getkeyordie('image_id'),
-                    region_id=getkeyordie('region_id'),
+                    size_slug=getkeyordie('size_slug'),
+                    image_slug=getkeyordie('image_slug'),
+                    region_slug=getkeyordie('region_slug'),
                     ssh_key_ids=module.params['ssh_key_ids'],
                     virtio=module.params['virtio'],
                     private_networking=module.params['private_networking'],
@@ -383,9 +383,9 @@ def main():
             state = dict(choices=['active', 'present', 'absent', 'deleted'], default='present'),
             api_token = dict(aliases=['API_TOKEN'], no_log=True),
             name = dict(type='str'),
-            size_id = dict(type='int'),
-            image_id = dict(type='int'),
-            region_id = dict(type='int'),
+            size_slug = dict(type='str'),
+            image_slug = dict(type='str'),
+            region_slug = dict(type='str'),
             ssh_key_ids = dict(default=''),
             virtio = dict(type='bool', default='yes'),
             private_networking = dict(type='bool', default='no'),
@@ -397,12 +397,12 @@ def main():
             ssh_pub_key = dict(type='str'),
         ),
         required_together = (
-            ['size_id', 'image_id', 'region_id'],
+            ['size_slug', 'image_slug', 'region_slug'],
         ),
         mutually_exclusive = (
-            ['size_id', 'ssh_pub_key'],
-            ['image_id', 'ssh_pub_key'],
-            ['region_id', 'ssh_pub_key'],
+            ['size_slug', 'ssh_pub_key'],
+            ['image_slug', 'ssh_pub_key'],
+            ['region_slug', 'ssh_pub_key'],
         ),
         required_one_of = (
             ['id', 'name'],
