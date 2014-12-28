@@ -102,7 +102,7 @@ EXAMPLES = '''
 # If a key matches this name, will return the ssh key id and changed = False
 # If no existing key matches this name, a new key is created, the ssh key id is returned and changed = False
 
-- digital_ocean: >
+- digital_ocean_v2: >
       state=present
       command=ssh
       name=my_ssh_key
@@ -112,7 +112,7 @@ EXAMPLES = '''
 # Create a new Droplet
 # Will return the droplet details including the droplet id (used for idempotence)
 
-- digital_ocean: >
+- digital_ocean_v2: >
       state=present
       command=droplet
       name=mydroplet
@@ -129,7 +129,7 @@ EXAMPLES = '''
 # If droplet id already exist, will return the droplet details and changed = False
 # If no droplet matches the id, a new droplet will be created and the droplet details (including the new id) are returned, changed = True.
 
-- digital_ocean: >
+- digital_ocean_v2: >
       state=present
       command=droplet
       id=123
@@ -145,7 +145,7 @@ EXAMPLES = '''
 # Several keys can be added to ssh_key_ids as id1,id2,id3
 # The keys are used to connect as root to the droplet.
 
-- digital_ocean: >
+- digital_ocean_v2: >
       state=present
       ssh_key_ids=id1,id2
       name=mydroplet
