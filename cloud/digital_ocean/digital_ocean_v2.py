@@ -45,7 +45,6 @@ options:
   unique_name:
     description:
      - Bool, require unique hostnames.  By default, DigitalOcean allows multiple hosts with the same name.  Setting this to "yes" allows only one host per name.  Useful for idempotence.
-    version_added: "1.4"
     default: "no"
     choices: [ "yes", "no" ]
   size_slug:
@@ -63,19 +62,16 @@ options:
   virtio:
     description:
      - "Bool, turn on virtio driver in droplet for improved network and storage I/O."
-    version_added: "1.4"
     default: "yes"
     choices: [ "yes", "no" ]
   private_networking:
     description:
      - "Bool, add an additional, private network interface to droplet for inter-droplet communication."
-    version_added: "1.4"
     default: "no"
     choices: [ "yes", "no" ]
   backups_enabled:
     description:
      - Optional, Boolean, enables backups for your droplet.
-    version_added: "1.6"
     default: "no"
     choices: [ "yes", "no" ]
   wait:
